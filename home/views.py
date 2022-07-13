@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, logout, login
+from django.http import HttpResponse, HttpResponseRedirect
+import os, filecmp
 # Create your views here.
 def index(request):
     if request.user.is_anonymous:
@@ -22,3 +24,6 @@ def loginUser(request):
 def logoutUser(request):
     logout(request)
     return redirect("/login")
+
+def allproblems(request):
+   return HttpResponse("QUESTIONS")
