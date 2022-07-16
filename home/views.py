@@ -39,8 +39,8 @@ def allproblems(request):
    return render(request, 'index1.html', context)
 
 def problemDetail(request, problem_id):
-    problem =get_object_or_404(Problem,pk=problem_id)
-    return render(request, 'detail.html', {'probelms': problem})
+    problem = get_object_or_404(Problem, pk=problem_id)
+    return render(request, 'detail.html', {'problem': problem})
 
 def submitProblem(request, problem_id):
     f = request.FILES['solution']
