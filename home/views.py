@@ -9,6 +9,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 import os, filecmp
+from datetime import datetime
+
 
 from home.models import Problem, Solution
 # Create your views here.
@@ -43,18 +45,22 @@ def problemDetail(request, problem_id):
     return render(request, 'detail.html', {'problem': problem})
 
 def submitProblem(request, problem_id):
-    f = request.FILES['solution']
-    with open('/Users/suranamudit/solution.cpp', 'wb+') as dest:
+    f = request.FILES['solution'] 
+    user_submission_file = rf'C:\Django\onlinejudge\home\uploads\usersubmissions\{problem_id}_{request.user.id}_{datetime.now()}.cpp' #1_xyz_2021-06-25 07:58:56.550604
+    with open(user_submission_file, 'wb+') as dest:
          for chunk in f.chunks():
              dest.write(chunk)
-    os.system('g++ /Users/suranamudit/solution.cpp')
-    os.system('./a.out < /Users/suranamudit/inp.txt > /Users/suranamudit/out.txt')
+    os.system(f'g++ {user_submission_file}.cpp -o {user_submission_file}.out')
+    # t1 = Testcases.objects.filter(probl); // t1 is the test case of problem_id
+    testcase_input_file = t1.input; 
+    testcase_output_file = t1.output; 
+
+    os.system(rf'{user_submission_file}.out < {testcase_input_file} > C:\Django\onlinejudge\home\out.txt')
     
-    out1= '/Users/suranamudit/out.txt'
-    out2= '/Users/suranamudit/actual_out.txt'
+    out1= r'C:\Django\onlinejudge\home\out.txt'
+    out2= testcase_output_file
     if (filecmp.cmp(out1, out2, shallow=False)):
          verdict = 'Accepted'           
-
     else:
          verdict = 'Wrong Answer'  
     
@@ -62,7 +68,7 @@ def submitProblem(request, problem_id):
     solution.problem = Problem.objects.get(pk=problem_id)
     solution.verdict = verdict
     solution.submitted_at = timezone.now()
-    solution.submitted_code = '/Users/suranamudit/solution.cpp'
+    solution.submitted_code = user_submission_file
     solution.save()
     
     return HttpResponseRedirect(reverse('home:leaderboard'))
