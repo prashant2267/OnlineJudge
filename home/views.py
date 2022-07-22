@@ -1,4 +1,4 @@
-import imp
+import subprocess
 from time import timezone
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
@@ -12,7 +12,7 @@ import os, filecmp
 from datetime import datetime
 
 
-from home.models import Problem, Solution
+from home.models import Problem, Solution, Testcases
 # Create your views here.
 def index(request):
     if request.user.is_anonymous:
@@ -46,20 +46,45 @@ def problemDetail(request, problem_id):
 
 def submitProblem(request, problem_id):
     f = request.FILES['solution'] 
-    user_submission_file = rf'C:\Django\onlinejudge\home\uploads\usersubmissions\{problem_id}_{request.user.id}_{datetime.now()}.cpp' #1_xyz_2021-06-25 07:58:56.550604
-    with open(user_submission_file, 'wb+') as dest:
+    # use relative path
+    # absolute path vs relative path
+    user_file_prefix = rf'C:\Django\onlinejudge\home\uploads\usersubmissions\{problem_id}_{request.user.id}_{datetime.now().strftime("%Y-%m-%d-%H-%M-%S")}' #1_xyz_2021-06-25 07:58:56.550604
+    
+    user_code_file = f"{user_file_prefix}.cpp"
+    user_executable_file = f"{user_file_prefix}.exe"
+    
+    #Copies code of user into this file
+    with open(user_code_file, 'wb+') as dest:
          for chunk in f.chunks():
              dest.write(chunk)
-    os.system(f'g++ {user_submission_file}.cpp -o {user_submission_file}.out')
-    # t1 = Testcases.objects.filter(probl); // t1 is the test case of problem_id
-    testcase_input_file = t1.input; 
-    testcase_output_file = t1.output; 
 
-    os.system(rf'{user_submission_file}.out < {testcase_input_file} > C:\Django\onlinejudge\home\out.txt')
-    
-    out1= r'C:\Django\onlinejudge\home\out.txt'
-    out2= testcase_output_file
-    if (filecmp.cmp(out1, out2, shallow=False)):
+
+    # Code which is syntactically wrong, will throw an error. you can use try and catch . 
+    os.system(f'g++ {user_code_file} -o {user_executable_file}') #Use subprocess module instead of os
+   
+    test_cases = Testcases.objects.filter(problem=problem_id);  # [TestCase1, TestCase2...]
+   
+    flag = True; 
+   
+    for testcase in test_cases: 
+        testcase_input_file = testcase.input; 
+        testcase_output_file = testcase.output; 
+
+
+        #use relative path. 
+        out1= r'C:\Django\onlinejudge\home\out.txt'
+
+
+        output = subprocess.check_output(user_executable_file, stdin=open(testcase_input_file)).decode("utf-8")
+        
+        with open(out1, "w") as dest: 
+            dest.write(output)
+
+        if not(filecmp.cmp(out1, testcase_output_file, shallow=False)): 
+            flag = False; 
+            break 
+
+    if flag:
          verdict = 'Accepted'           
     else:
          verdict = 'Wrong Answer'  
@@ -68,11 +93,11 @@ def submitProblem(request, problem_id):
     solution.problem = Problem.objects.get(pk=problem_id)
     solution.verdict = verdict
     solution.submitted_at = timezone.now()
-    solution.submitted_code = user_submission_file
+    solution.submitted_code = user_code_file
     solution.save()
     
-    return HttpResponseRedirect(reverse('home:leaderboard'))
+    return redirect('leaderboard')
 
 def leaderboard(request):
     solutions = Solution.objects.all()
-    return render(request, 'home/leaderboard.html', {'solutions': solutions}) 
+    return render(request, 'leaderboard.html', {'solutions': solutions}) 
